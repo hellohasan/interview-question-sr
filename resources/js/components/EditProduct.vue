@@ -35,7 +35,7 @@
 						<h6 class="m-0 font-weight-bold text-primary">Variants</h6>
 					</div>
 					<div class="card-body">
-						<div class="row" v-for="(item,index) in product_variant">
+						<div class="row" v-for="(item,index) in product_variant" :key="index">
 							<div class="col-md-4">
 								<div class="form-group">
 									<label for="">Option</label>
@@ -88,7 +88,7 @@
 			</div>
 		</div>
 
-		<button @click="saveProduct" type="submit" class="btn btn-lg btn-primary">Save</button>
+		<button @click="saveProduct" type="submit" class="btn btn-lg btn-primary">Update</button>
 		<button type="button" class="btn btn-secondary btn-lg">Cancel</button>
 	</section>
 </template>
@@ -107,10 +107,14 @@
 			variants: {
 				type: Array,
 				required: true
-			}
+			},
+			product: {
+				required: true
+			},
 		},
 		data() {
 			return {
+				product_id: '',
 				product_name: '',
 				product_sku: '',
 				description: '',
@@ -130,6 +134,13 @@
 				}
 			}
 		},
+
+		watch: {
+			product_variant: function () {
+				this.checkVariant()
+			}
+		},
+
 		methods: {
 			// it will push a new object into product variant
 			newVariant() {
@@ -143,6 +154,7 @@
 					tags: []
 				})
 			},
+
 
 			// check the variant and render all the combination
 			checkVariant() {
@@ -174,9 +186,19 @@
 				return ans;
 			},
 
+			loadProductPrice(price) {
+				setTimeout(() => {
+					_.forEach(this.product_variant_prices, (value, key) => {
+						value.price = price.[key].price;
+						value.stock = price.[key].stock;
+					})
+				}, 2000, this)
+			},
+
 			// store product into database
 			saveProduct() {
 				let product = {
+					id: this.product_id,
 					title: this.product_name,
 					sku: this.product_sku,
 					description: this.description,
@@ -185,8 +207,8 @@
 					product_variant_prices: this.product_variant_prices
 				}
 
-				axios.post('/product', product).then(response => {
-					alert('Product Created Successfully.')
+				axios.put(`/product/${product.id}`, product).then(response => {
+					alert('Product Update Successfully.')
 					window.location.href = "http://127.0.0.1:8000/product"
 				}).catch(error => {
 					console.log(error);
@@ -197,8 +219,27 @@
 
 
 		},
-		mounted() {
-			console.log('Component mounted.')
+		created() {
+			this.product_id = this.product.id
+			this.product_name = this.product.title
+			this.product_sku = this.product.sku
+			this.description = this.product.description
+			this.product_variant = [];
+			const variants = _.groupBy(this.product.variants, 'variant_id');
+
+			_.forEach(variants, (value, key) => {
+				let c = [];
+				_.forEach(value, (v) => {
+					c.push(v.variant)
+				})
+				let vv = {
+					option: key,
+					tags: c
+				}
+				this.product_variant.push(vv);
+			})
+			this.loadProductPrice(this.product.prices);
+
 		}
 	}
 </script>
